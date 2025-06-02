@@ -22,7 +22,21 @@ def scan_files(folder) :
                             if isinstance(inner,javalang.tree.MethodDeclaration) :
                                 count += 1
                         df = df._append({'class_name': node.name,'method_num' : count},ignore_index = True)
-    return df
+    return df.sort_values('method_num',ascending=False).iloc[0:4]['class_name']
+
+def get_path(folder) :
+    gods = scan_files(folder)
+    paths = []
+    for god in gods :
+        for root,dir,files in os.walk('Scan/resources'):
+            for file in files:
+                if file.endswith('.java'):
+                    filepath = os.path.join(root,file)
+                    filename = os.path.splitext(os.path.basename(filepath))[0]
+                    if filename == god :
+                        paths.append(filepath)
+    return paths
+
 
 
 
