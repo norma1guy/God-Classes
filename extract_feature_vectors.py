@@ -2,7 +2,8 @@ import javalang
 from pprint import pprint
 import os
 import pandas as pd
-from find_god_classes import get_path
+from find_god_classes import scan_files
+import numpy as np
 
 def get_methods(java_class) :
     methods = []
@@ -51,41 +52,50 @@ def create_dict(arr):
 
 
 
+
 def create_fv(filepath):
     filename = os.path.splitext(os.path.basename(filepath))[0]
-    source_code = open(filepath).read()
+    
+    with open(filepath, 'r') as file:
+        source_code = file.read()
+
     tree = javalang.parse.parse(source_code)
-    for path,node in tree :
-        if isinstance(node,javalang.tree.ClassDeclaration) and  node.name == filename:
+    gt_dict = {}
+    for path, node in tree:
+        if isinstance(node, javalang.tree.ClassDeclaration) and node.name == filename:
             fields_nodes = get_fields(node)
             method_nodes = get_methods(node)
-            fields = list(set([field.declarators[0].name for field in fields_nodes]))
-            methods_dict = create_dict(method_nodes)
-            methods = list(methods_dict.keys())
-            combine = fields + methods
-            data = [[0] * len(combine) for _ in methods]
-            df = pd.DataFrame(data,columns = combine)
-            df.insert(0,'method_name',methods)
-            for method in methods :
-                faccess =get_fields_accessed_by_method(methods_dict[method])
-                maccess = get_methods_accessed_by_method(methods_dict[method])
-                for index,row in df.iterrows():
-                    if row['method_name'] == method :
-                        for entry in faccess:
-                            df.at[index,entry] = 1
-                        for entry in maccess:
-                            df.at[index,entry] = 1
-            df = df.fillna(0)
             
-            df.to_csv('Data/fvs/' + filename + '.csv',index=False)
+            fields = {field.declarators[0].name for field in fields_nodes}
+            methods_dict = create_dict(method_nodes)
+            
+            methods = list(methods_dict.keys())
+            gt_dict[filename] = methods
+            
+            combine = list(fields.union(methods))
+            method_index = {method: i for i, method in enumerate(methods)}
+            feature_index = {feature: i for i, feature in enumerate(combine)}
+            
+            data = np.zeros((len(methods), len(combine)), dtype=int)
 
+            for method in methods:
+                faccess = get_fields_accessed_by_method(methods_dict[method])
+                maccess = get_methods_accessed_by_method(methods_dict[method])
 
-if __name__ == "__main__":
+                row_idx = method_index[method]
+                for field in faccess:
+                    if field in feature_index:
+                        data[row_idx, feature_index[field]] = 1
+                for m in maccess:
+                    if m in feature_index:
+                        data[row_idx, feature_index[m]] = 1
 
-    god_classes = get_path('Scan/resources')
-    os.makedirs('Data/fvs/')
-    for god in god_classes:
-        create_fv(god)
+            df = pd.DataFrame(data, columns=combine)
+            df.insert(0, 'method_name', methods)
+            if not os.path.isdir('Data/fvs'):
+                os.makedirs('Data/fvs')
+            df.to_csv(f'Data/fvs/{filename}.csv', index=False)
+    return gt_dict
 
     
 

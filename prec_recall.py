@@ -3,6 +3,11 @@ from itertools import combinations
 from find_god_classes import scan_files
 
 def calc_pre_recall(cluster,gt):
+    '''
+    Calculates precision and recall of the clustering found
+    cluster : cluster file path
+    gt : ground truth file path
+    '''
 
     cluster_df = pd.read_csv(cluster)
     gt_df = pd.read_csv(gt)
@@ -28,13 +33,3 @@ def calc_pre_recall(cluster,gt):
     print(f"Precision: {precision:.4f}")
     print(f"Recall: {recall:.4f}")
 
-
-if __name__ == '__main__' :
-    gods = scan_files('Scan/resources')
-    for god in gods :
-        algos = ['kmeans','agglo']
-        for algo in algos :
-            cluster_file = 'Data/clustering/' + god + '_' + algo + '.csv'
-            ground_truth = 'Data/gt/' + god + '_ground-truth.csv'
-            print(f'\nThe god class {god} for the algorithm {algo} has\n')
-            calc_pre_recall(cluster_file,ground_truth)
